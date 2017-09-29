@@ -14,5 +14,5 @@ UPDATE etl_state_timeinzone SET
 WHERE state_name = :state_name
 IF @@rowcount = 0
   BEGIN
-    INSERT INTO etl_st_timeinzone VALUES (:state_name, :state_value)
+    INSERT INTO etl_state_timeinzone VALUES (:state_name, :state_value)
   END
