@@ -12,7 +12,23 @@
   ([conn last-id] (events conn {:last_id last-id}))
   ([conn] (get-events conn 0)))
 
-(defn last-event-id [conn]
+(defn parse-str-int [s]
+  (if (integer? s)
+    s
+    (try
+      (Integer/parseInt s)
+      (catch Exception e 0))))
+
+(defn etl-last-event-id [conn]
   (if-let [res (etl-status conn)]
-    (:state_value res)
+    (parse-str-int (:state_value res))
     0))
+
+(defn data-last-event-id [conn]
+  (if-let [res (last-event-id conn)]
+    (:id res)
+    0))
+
+;(parse-str-int 123)
+;(parse-str-int "1234")
+;(parse-str-int "1sdd234")

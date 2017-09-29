@@ -4,15 +4,16 @@
             [pik-logistic-etl.db.core :refer [db]]
             [clj-time.core :as t]
             [clj-time.format :as tf]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [clojure.java.jdbc :refer [with-db-transaction]]))
 
 (def navyixy-time-formatter (tf/formatter "yyyy-MM-dd HH:mm:ss"))
 (def one-day (t/days 1))
 (def one-sec (t/seconds 1))
 
-(defn- open-zone [event]
-  (when (q/insert? db event)
-    (c/open-zone! db event)))
+(defn- open-zone [conn event]
+  (when (q/insert? conn event)
+    (c/open-zone! conn event)))
 
 ;
 ;(q/last-inserted-event-for-close db {:id 78642084, :tracker_id 144953, :event "inzone", :time "2017-01-13 16:08:40", :zone_id 68989})
@@ -54,27 +55,27 @@
 
 ;(sql-inout-times "2017-01-29 09:08:09" "2017-02-01 09:08:10")
 
-(defn- close-zone-one [event guid out-time]
-  (c/close-zone! db (merge event {:guid guid :time out-time})))
+(defn- close-zone-one [conn event guid out-time]
+  (c/close-zone! conn (merge event {:guid guid :time out-time})))
 
 
 
-(defn- close-zone-in-days [event sql-times]
+(defn- close-zone-in-days [conn event sql-times]
   (when-not (empty? sql-times)
     (let [tt (first sql-times)]
-      (open-zone (merge event {:time (first tt)}))
-      (let [rec (q/last-inserted-event-for-close db event)
+      (open-zone conn (merge event {:time (first tt)}))
+      (let [rec (q/last-inserted-event-for-close conn event)
             guid (:guid rec)]
-        (close-zone-one event guid (second tt))))
-    (recur event (rest sql-times))))
+        (close-zone-one conn event guid (second tt))))
+    (recur conn event (rest sql-times))))
 
 
-(defn close-zone [event]
-  (when-let [ev (q/last-inserted-event-for-close db event)]
+(defn close-zone [conn event]
+  (when-let [ev (q/last-inserted-event-for-close conn event)]
     (let [in-time (:in_time ev)
           out-time (:time event)
           sql-times (sql-inout-times in-time out-time)]
-      (close-zone-in-days event sql-times))))
+      (close-zone-in-days conn event sql-times))))
 
 ;(def e1 {:id 78669525, :tracker_id 144953, :event "outzone", :time "2017-01-13 18:48:50", :zone_id 68989})
 
@@ -88,20 +89,25 @@
 ;(q/last-inserted-event-for-close db e1)
 
 
-(defn- save-etl-status [event]
+(defn- save-etl-status [conn event]
   (let [params {:state_name "last-event-id" :state_value (:id event)}]
-    (c/update-etl-status! db params)))
+    (c/update-etl-status! conn params)))
 
-(defn- process-event [event]
+(defn- process-event [conn event]
   (case (:event event)
-    "inzone" (open-zone event)
-    "outzone" (close-zone event))
-  (save-etl-status event))
+    "inzone" (open-zone conn event)
+    "outzone" (close-zone conn event))
+  (save-etl-status conn event))
 
-(defn- process-events [events]
-  (doseq [event events]
-    (process-event event)))
+(defn- process-events [conn last-event-id]
+  (log/info "> > > start from event-id: " last-event-id)
+  (doseq [event (q/get-events conn last-event-id)]
+    (process-event conn event)))
 
+
+;(process-events db 119354402)
+;(process-events db 119389673)
+;(process-events db 119446312)
 ;(def e1 {:id 78669834, :tracker_id 144953, :event "inzone", :time "2017-01-13 18:51:16", :zone_id 68989})
 ;(open-zone e1)
 ;(close-zone e1)
@@ -113,16 +119,19 @@
 ;(process-event (nth tmp 19))
 ;(q/last-inserted-event-for-close db (nth tmp 8))
 ;(process-events tmp)
-;(q/last-event-id db)
+;(q/etl-last-event-id db)
+;(q/data-last-event-id db)
 
 ;получить события порциями
 ;обратывать пока есть события
+
 (defn process []
-  (loop [last-event-id (q/last-event-id db)
-         events (q/get-events db last-event-id)]
-    (when-not (empty? events)
-      (process-events events)
-      (log/info "processed 1000 events, from event-id: " last-event-id)
-      (recur (q/last-event-id db) (q/get-events db last-event-id)))))
+  (let [data-last-id (q/data-last-event-id db)]
+    (loop []
+      (let [etl-event-id (q/etl-last-event-id db)]
+        (when (> data-last-id etl-event-id)
+          (with-db-transaction [tx db]
+            (process-events tx etl-event-id))
+          (recur))))))
 
 ;(process)

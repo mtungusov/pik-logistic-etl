@@ -2,7 +2,8 @@
   (:require [clojure.tools.logging :as log]
             [mount.core :as mount]
             [pik-logistic-etl.config :refer [settings]]
-            [pik-logistic-etl.db.core :refer [db]])
+            [pik-logistic-etl.db.core :refer [db]]
+            [pik-logistic-etl.etl.time-in-zone :as time-in-zone])
   (:gen-class))
 
 (def state (atom {}))
@@ -24,4 +25,6 @@
   (init args)
   (.addShutdownHook (Runtime/getRuntime)
                     (Thread. stop))
-  (while (:running @state) (Thread/sleep 1000)))
+  (while (:running @state)
+    (time-in-zone/process)
+    (Thread/sleep (* 5 60 1000))))

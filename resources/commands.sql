@@ -9,7 +9,7 @@ SET out_time = :time
 WHERE guid = :guid AND in_time <= :time
 
 -- :name update-etl-status! :! :n
-UPDATE etl_st_timeinzone SET
+UPDATE etl_state_timeinzone SET
   state_value = :state_value
 WHERE state_name = :state_name
 IF @@rowcount = 0

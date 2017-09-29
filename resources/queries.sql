@@ -1,5 +1,5 @@
 -- :name events :? :*
-SELECT TOP 1000 id, tracker_id, event, time, zone_id
+SELECT TOP 100 id, tracker_id, event, time, zone_id
 FROM inoutzone_times
 WHERE id > :last_id
 ORDER BY id
@@ -26,5 +26,10 @@ ORDER BY in_time DESC
 
 -- :name etl-status :? :1
 SELECT TOP 1 state_value
-FROM etl_st_timeinzone
+FROM etl_state_timeinzone
 WHERE state_name = 'last-event-id'
+
+-- :name last-event-id :? :1
+SELECT TOP 1 id
+FROM inoutzone_times
+ORDER BY id DESC
