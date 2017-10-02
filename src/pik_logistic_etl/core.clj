@@ -28,4 +28,4 @@
   (while (:running @state)
     (log/info "ETL time-in-zone")
     (time-in-zone/process)
-    (Thread/sleep (* 5 60 1000))))
+    (Thread/sleep (* 15 60 1000))))
