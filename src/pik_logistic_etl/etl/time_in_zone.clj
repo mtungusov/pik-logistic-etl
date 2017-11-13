@@ -1,6 +1,6 @@
 (ns pik-logistic-etl.etl.time-in-zone
-  (:require [pik-logistic-etl.db.queries :as q]
-            [pik-logistic-etl.db.commands :as c]
+  (:require [pik-logistic-etl.db.time-in-zone.q :as q]
+            [pik-logistic-etl.db.time-in-zone.c :as c]
             [pik-logistic-etl.db.core :refer [db]]
             [clj-time.core :as t]
             [clj-time.format :as tf]
@@ -90,7 +90,7 @@
 
 
 (defn- save-etl-status [conn event]
-  (let [params {:state_name "last-event-id" :state_value (:id event)}]
+  (let [params {:etl_name "time-in-zone" :state_name "last-event-id" :state_value (:id event)}]
     (c/update-etl-status! conn params)))
 
 (defn- process-event [conn event]
@@ -108,10 +108,10 @@
 ;(process-events db 119354402)
 ;(process-events db 119389673)
 ;(process-events db 119446312)
-;(def e1 {:id 78669834, :tracker_id 144953, :event "inzone", :time "2017-01-13 18:51:16", :zone_id 68989})
+;(def e1 {:id 140722066, :tracker_id 144953, :event "inzone", :time "2017-01-13 18:51:16", :zone_id 68989})
 ;(open-zone e1)
 ;(close-zone e1)
-;(save-etl-status e1)
+;(save-etl-status db e1)
 ;(q/get-events db)
 ;(def tmp (q/get-events db))
 ;(identity tmp)

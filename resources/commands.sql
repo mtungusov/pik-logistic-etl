@@ -1,18 +1,9 @@
--- :name open-zone! :! :n
-INSERT INTO st_timeinzone
-(tracker_id, zone_id, in_time)
-VALUES (:tracker_id, :zone_id, :time)
-
--- :name close-zone! :! :n
-UPDATE st_timeinzone
-SET out_time = :time
-WHERE guid = :guid AND in_time <= :time
-
 -- :name update-etl-status! :! :n
-UPDATE etl_state_timeinzone SET
+UPDATE etl_state SET
   state_value = :state_value
-WHERE state_name = :state_name
+WHERE etl_name = :etl_name AND state_name = :state_name
 IF @@rowcount = 0
   BEGIN
-    INSERT INTO etl_state_timeinzone VALUES (:state_name, :state_value)
+    INSERT INTO etl_state (etl_name, state_name, state_value)
+    VALUES (:etl_name, :state_name, :state_value)
   END
