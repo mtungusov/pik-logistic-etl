@@ -1,4 +1,8 @@
-(ns pik-logistic-etl.util)
+(ns pik-logistic-etl.util
+  (:require [clj-time.format :as tf]))
+
+(defonce navyixy-time-formatter (tf/formatter "yyyy-MM-dd HH:mm:ss"))
+
 
 (defn parse-str-int [s]
   (if (integer? s)

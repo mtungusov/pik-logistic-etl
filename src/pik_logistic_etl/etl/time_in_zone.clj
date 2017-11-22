@@ -1,13 +1,14 @@
 (ns pik-logistic-etl.etl.time-in-zone
   (:require [pik-logistic-etl.db.time-in-zone.q :as q]
             [pik-logistic-etl.db.time-in-zone.c :as c]
-            [pik-logistic-etl.db.core :refer [db]]
+            [pik-logistic-etl.db.core :refer [db-etl-time-in-zone] :rename {db-etl-time-in-zone db}]
             [clj-time.core :as t]
             [clj-time.format :as tf]
             [clojure.tools.logging :as log]
-            [clojure.java.jdbc :refer [with-db-transaction]]))
+            [clojure.java.jdbc :refer [with-db-transaction]]
+            [pik-logistic-etl.util :refer [navyixy-time-formatter]]))
 
-(def navyixy-time-formatter (tf/formatter "yyyy-MM-dd HH:mm:ss"))
+;(def navyixy-time-formatter (tf/formatter "yyyy-MM-dd HH:mm:ss"))
 (def one-day (t/days 1))
 (def one-sec (t/seconds 1))
 

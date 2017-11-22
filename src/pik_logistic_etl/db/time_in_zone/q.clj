@@ -14,12 +14,6 @@
   ([conn last-id] (events conn {:last_id last-id}))
   ([conn] (get-events conn 0)))
 
-;(defn parse-str-int [s]
-;  (if (integer? s)
-;    s
-;    (try
-;      (Integer/parseInt s)
-;      (catch Exception e 0))))
 
 (defn etl-last-event-id [conn]
   (if-let [res (etl-status conn {:etl_name "time-in-zone" :state_name "last-event-id"})]
