@@ -3,7 +3,8 @@
             [clojure.java.jdbc :refer [with-db-transaction]]
             [pik-logistic-etl.db.core :refer [db-etl-trackers-info] :rename {db-etl-trackers-info db}]
             [pik-logistic-etl.db.trackers-info.q :as q]
-            [pik-logistic-etl.db.commands :as c-core]))
+            [pik-logistic-etl.db.commands :as c-core]
+            [pik-logistic-etl.db.trackers-info.c :as c]))
 
 
 (defn- save-etl-status [conn event_id]
@@ -11,70 +12,88 @@
     (c-core/update-etl-status! conn params)))
 
 
-(defn- process-event-inzone [conn event]
-  (let [event_id (:event_id event)
-        event_time (:time event)
-        event_type (:event event)
-        tracker_id (:tracker_id event)
-        zone_id (:zone_id event)
+(defn- process-event-inzone-with-parent-zone [event conn]
+  (let [prev_info (q/get-tracker-info conn (:tracker_id event))
         zone_parent_id (:zone_parent_id event)
-        prev_info (q/get-tracker-info conn tracker_id)
         prev_zone_id_in (:zone_id_in prev_info)
-        prev_time_in (:time_in prev_info)
-        params {:tracker_id tracker_id
-                :event_id event_id
-                :event event_type
-                :zone_id_in zone_id
-                :time_in event_time
+        prev_time_in (:time_in prev_info)]
+    (cond-> event
+      (= zone_parent_id prev_zone_id_in) (assoc :zone_id_out prev_zone_id_in
+                                                :time_out prev_time_in))))
+
+(defn- process-event-inzone [conn event]
+  (cond-> event
+    true (assoc :zone_id_in (:zone_id event)
+                :time_in (:time event)
                 :zone_id_out nil
-                :time_out nil}]
-    (cond-> params
-      (and
-        (not zone_parent_id)
-        (= zone_parent_id prev_zone_id_in)) (assoc :zone_id_out prev_zone_id_in :time_out prev_time_in))))
+                :time_out nil)
+    (:zone_parent_id event) (process-event-inzone-with-parent-zone conn)))
 
-    ;
-    ;
-    ;(if-not zone_parent_id
-    ;  (log/info params)
-    ;  (let [prev_info (q/get-tracker-info conn tracker_id)
-    ;        prev_zone_id_in (:zone_id_in prev_info)
-    ;        prev_time_in (:time_in prev_info)]
-    ;    (if (= zone_parent_id prev_zone_id_in)
-    ;      (log/info (merge params {:zone_id_out prev_zone_id_in
-    ;                               :time_out prev_time_in}))
-    ;      (log/info params))))))
 
+(defn- process-event-outzone-with-parent-zone [event conn]
+  (let [prev_info (q/get-tracker-info conn (:tracker_id event))
+        zone_parent_id (:zone_parent_id event)
+        prev_zone_id_out (:zone_id_out prev_info)
+        prev_time_out (:time_out prev_info)]
+    (cond-> event
+            (= zone_parent_id prev_zone_id_out) (assoc :zone_id_in prev_zone_id_out
+                                                      :time_in prev_time_out))))
+
+(defn- process-event-outzone [conn event]
+  (cond-> event
+    true (assoc :zone_id_out (:zone_id event)
+                :time_out (:time event)
+                :zone_id_in nil
+                :time_in nil)
+    (:zone_parent_id event) (process-event-outzone-with-parent-zone conn)))
 
 ;(q/get-tracker-info db 0)
-;(process-event-inzone db {:tracker_id 249961,
-;                          :event_id 197791939,
-;                          :event "inzone",
-;                          :time "2017-11-22 13:30:50",
-;                          :zone_id 68989,
-;                          :zone_parent_id nil})
+;(def event1 {:tracker_id 249961,
+;             :event_id 197791939,
+;             :event "inzone",
+;             :time "2017-11-22 13:30:51",
+;             :zone_id 68989,
+;             :zone_parent_id nil})
+
+;(c/update-tracker-info! db (process-event-inzone db event1))
+
+;(def event2 {:tracker_id 249961,
+;             :event_id 197791940,
+;             :event "inzone",
+;             :time "2017-11-22 13:32:50",
+;             :zone_id 107544,
+;             :zone_parent_id 68989})
 ;
-;(process-event-inzone db {:tracker_id 249961,
-;                          :event_id 197791940,
-;                          :event "inzone",
-;                          :time "2017-11-22 13:32:50",
-;                          :zone_id 107544,
-;                          :zone_parent_id 68989})
+;(def event3 {:tracker_id 249961,
+;             :event_id 197791941,
+;             :event "outzone",
+;             :time "2017-11-22 13:35:00",
+;             :zone_id 107543,
+;             :zone_parent_id nil})
+;
+;(def event4 {:tracker_id 249961,
+;             :event_id 197791942,
+;             :event "outzone",
+;             :time "2017-11-22 13:35:00",
+;             :zone_id 107544,
+;             :zone_parent_id 68989})
 
-
+;(process-event-outzone db event4)
 
 
 (defn- process-event [conn event]
-  (log/info (identity event))
-  (let [id (:event_id event)
-        event_type (:event event)]
-    (case event_type
-      "inzone" (log/info "inzone")
-      "outzone" (log/info "outzone")
-      "online" (log/info "online"))
-    id))
+  (c/update-tracker-info!
+    conn
+    (case (:event event)
+      "inzone" (process-event-inzone conn event)
+      "outzone" (process-event-outzone conn event)))
+      ;"online" (log/info "online")))
+  (:event_id event))
 
-;(process-event db {:tracker_id 144950, :event_id 76316107, :event "online", :time "2017-01-01 03:48:57", :zone_id 107544})
+;(process-event db event1)
+;(process-event db event2)
+;(process-event db event3)
+;(process-event db event4)
 
 
 (defn- process-events [conn last-event-id]
@@ -84,7 +103,7 @@
     r))
 
 
-(q/get-events db 197790181)
+;(q/get-events db 197790181)
 
 (defn process []
   (let [data-last-id (q/data-last-event-id db)]
