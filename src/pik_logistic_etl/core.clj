@@ -1,7 +1,8 @@
 (ns pik-logistic-etl.core
   (:require [clojure.tools.logging :as log]
             [mount.core :as mount]
-            [pik-logistic-etl.etl.time-in-zone :as time-in-zone])
+            [pik-logistic-etl.etl.time-in-zone :as time-in-zone]
+            [pik-logistic-etl.etl.trackers-info :as trackers-info])
   (:gen-class))
 
 (def state (atom {}))
@@ -41,6 +42,12 @@
   (log/info "ETL time-in-zone Finish"))
 
 
+(defn- etl-trackers-info []
+  (log/info "ETL trackers-info Start")
+  (trackers-info/process)
+  (log/info "ETL trackers-info Finish"))
+
+
 (defn -main [& args]
   (init args)
   (.addShutdownHook (Runtime/getRuntime)
@@ -48,6 +55,7 @@
   (log/info "PIK logistic ETL starting...")
 
   (run-in-thread (* 15 60 1000) etl-time-in-zone)
+  (run-in-thread (* 1  20 1000) etl-trackers-info)
 
   (try
     (while (:running @state)
