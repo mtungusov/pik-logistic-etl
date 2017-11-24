@@ -1,5 +1,5 @@
 -- :name events :? :*
-SELECT top 10 tracker_events.tracker_id, tracker_events.id AS event_id, tracker_events.event, tracker_events.time,
+SELECT top 100 tracker_events.tracker_id, tracker_events.id AS event_id, tracker_events.event, tracker_events.time,
   rules.zone_id, zones.parent_id AS zone_parent_id
 FROM tracker_events
   LEFT JOIN rules ON tracker_events.rule_id = rules.id

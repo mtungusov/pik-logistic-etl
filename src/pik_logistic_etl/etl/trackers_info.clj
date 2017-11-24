@@ -19,7 +19,9 @@
         prev_time_in (:time_in prev_info)]
     (cond-> event
       (= zone_parent_id prev_zone_id_in) (assoc :zone_id_out prev_zone_id_in
-                                                :time_out prev_time_in))))
+                                                :time_out prev_time_in)
+      (nil? prev_time_in) (assoc :zone_id_out zone_parent_id
+                                 :time_out (:time event)))))
 
 (defn- process-event-inzone [conn event]
   (cond-> event
@@ -36,8 +38,14 @@
         prev_zone_id_out (:zone_id_out prev_info)
         prev_time_out (:time_out prev_info)]
     (cond-> event
-            (= zone_parent_id prev_zone_id_out) (assoc :zone_id_in prev_zone_id_out
-                                                      :time_in prev_time_out))))
+            (= zone_parent_id prev_zone_id_out) (assoc :zone_id_in zone_parent_id
+                                                       :time_in prev_time_out
+                                                       :zone_id_out nil
+                                                       :time_out nil)
+            (nil? prev_time_out) (assoc :zone_id_in zone_parent_id
+                                        :time_in (:time event)
+                                        :zone_id_out nil
+                                        :time_out nil))))
 
 (defn- process-event-outzone [conn event]
   (cond-> event
@@ -47,6 +55,13 @@
                 :time_in nil)
     (:zone_parent_id event) (process-event-outzone-with-parent-zone conn)))
 
+
+(defn- process-event-online [conn event]
+  (let [prev_info (q/get-tracker-info conn (:tracker_id event))
+        prev_zone_id_in (:zone_id_in prev_info)]
+    (when-not (= prev_zone_id_in (:zone_id event))
+      (process-event-inzone conn event))))
+
 ;(q/get-tracker-info db 0)
 ;(def event1 {:tracker_id 249961,
 ;             :event_id 197791939,
@@ -54,9 +69,7 @@
 ;             :time "2017-11-22 13:30:51",
 ;             :zone_id 68989,
 ;             :zone_parent_id nil})
-
-;(c/update-tracker-info! db (process-event-inzone db event1))
-
+;
 ;(def event2 {:tracker_id 249961,
 ;             :event_id 197791940,
 ;             :event "inzone",
@@ -77,23 +90,45 @@
 ;             :time "2017-11-22 13:35:00",
 ;             :zone_id 107544,
 ;             :zone_parent_id 68989})
+;
+;(def event5 {:tracker_id 249961,
+;             :event_id 197791943,
+;             :event "online",
+;             :time "2017-11-22 13:36:00",
+;             :zone_id 68989,
+;             :zone_parent_id nil})
 
+;(def event6 {:tracker_id 249961,
+;             :event_id 197791945,
+;             :event "online",
+;             :time "2017-11-22 13:37:00",
+;             :zone_id 107543,
+;             :zone_parent_id nil})
+
+
+;(process-event-inzone db event2)
 ;(process-event-outzone db event4)
+;(process-event-online db event5)
 
+(defn- save-event [conn event]
+  (when event
+    (c/update-tracker-info! conn event)))
 
 (defn- process-event [conn event]
-  (c/update-tracker-info!
+  (save-event
     conn
     (case (:event event)
       "inzone" (process-event-inzone conn event)
-      "outzone" (process-event-outzone conn event)))
-      ;"online" (log/info "online")))
+      "outzone" (process-event-outzone conn event)
+      "online" (process-event-online conn event)))
   (:event_id event))
 
 ;(process-event db event1)
 ;(process-event db event2)
 ;(process-event db event3)
 ;(process-event db event4)
+;(process-event db event5)
+;(process-event db event6)
 
 
 (defn- process-events [conn last-event-id]
