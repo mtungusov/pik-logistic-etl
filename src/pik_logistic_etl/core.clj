@@ -55,7 +55,7 @@
   (log/info "PIK logistic ETL starting...")
 
   (run-in-thread (* 15 60 1000) etl-time-in-zone)
-  (run-in-thread (* 1  20 1000) etl-trackers-info)
+  (run-in-thread (* 1  30 1000) etl-trackers-info)
 
   (try
     (while (:running @state)
