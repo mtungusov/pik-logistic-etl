@@ -119,8 +119,8 @@
     conn
     (case (:event event)
       "inzone" (process-event-inzone conn event)
-      "outzone" (process-event-outzone conn event)
-      "online" (process-event-online conn event)))
+      "outzone" (process-event-outzone conn event)))
+      ;"online" (process-event-online conn event)))
   (:event_id event))
 
 ;(process-event db event1)

@@ -4,14 +4,14 @@ SELECT top 100 tracker_events.tracker_id, tracker_events.id AS event_id, tracker
 FROM tracker_events
   LEFT JOIN rules ON tracker_events.rule_id = rules.id
   LEFT JOIN zones ON rules.zone_id = zones.id
-WHERE tracker_events.id > :last_id AND tracker_events.event IN ('inzone', 'outzone', 'online')
+WHERE tracker_events.id > :last_id AND tracker_events.event IN ('inzone', 'outzone')
 ORDER BY event_id
 
 
 -- :name last-event-id :? :1
 SELECT TOP 1 id
 FROM tracker_events
-WHERE event IN ('inzone', 'outzone', 'online')
+WHERE event IN ('inzone', 'outzone')
 ORDER BY id DESC
 
 
