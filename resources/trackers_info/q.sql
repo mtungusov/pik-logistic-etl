@@ -5,7 +5,7 @@ FROM tracker_events
   LEFT JOIN rules ON tracker_events.rule_id = rules.id
   LEFT JOIN zones ON rules.zone_id = zones.id
 WHERE tracker_events.id > :last_id AND tracker_events.event IN ('inzone', 'outzone')
-ORDER BY event_id
+ORDER BY tracker_events.time
 
 
 -- :name last-event-id :? :1
